@@ -100,6 +100,7 @@ function setupWebViewJavascriptBridge(callback) {
 	setTimeout(function() { document.documentElement.removeChild(WVJBIframe) }, 0)
 }
 ```
+> WKWebView doesn't have to do this, only UIWebView does.
 
 5) Finally, call `setupWebViewJavascriptBridge` and then use the bridge to register handlers and call ObjC handlers:
 
@@ -117,6 +118,7 @@ setupWebViewJavascriptBridge(function(bridge) {
 	})
 })
 ```
+> WKWebView doesn't have to do this, only UIWebView does.
 
 Automatic reference counting (ARC)
 ----------------------------------
