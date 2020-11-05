@@ -7,6 +7,7 @@
 
 
 #import "WKWebViewJavascriptBridge.h"
+#import "WebViewJavascriptBridge_JS.h"
 
 #if defined supportsWKWebView
 
@@ -25,6 +26,7 @@
 + (instancetype)bridgeForWebView:(WKWebView*)webView {
     WKWebViewJavascriptBridge* bridge = [[self alloc] init];
     [bridge _setupInstance:webView];
+    [bridge injectJavascriptFile];
     [bridge reset];
     return bridge;
 }
@@ -55,6 +57,19 @@
 
 - (void)removeHandler:(NSString *)handlerName {
     [_base.messageHandlers removeObjectForKey:handlerName];
+}
+
+- (void)injectJavascriptFile {
+    WKUserScript *javascriptBridge_js = [[WKUserScript alloc] initWithSource:WebViewJavascriptBridge_js() injectionTime:WKUserScriptInjectionTimeAtDocumentStart forMainFrameOnly:YES];
+    [_webView.configuration.userContentController addUserScript:javascriptBridge_js];
+    NSString* bridge_loaded_command = [NSString stringWithFormat:@"\
+                                       var bridgeLoadedIframe = document.createElement('iframe');\
+                                       bridgeLoadedIframe.style.display = 'none';\
+                                       bridgeLoadedIframe.src = '%@://%@';\
+                                       document.documentElement.appendChild(bridgeLoadedIframe);\
+                                       ", kOldProtocolScheme, kBridgeLoaded];
+    WKUserScript *javascriptBridge_loaded_js = [[WKUserScript alloc] initWithSource:bridge_loaded_command injectionTime:WKUserScriptInjectionTimeAtDocumentEnd forMainFrameOnly:YES];
+    [_webView.configuration.userContentController addUserScript:javascriptBridge_loaded_js];
 }
 
 - (void)reset {
@@ -92,11 +107,13 @@
 
 
 - (void)WKFlushMessageQueue {
+    __weak typeof(self) weakSelf = self;
     [_webView evaluateJavaScript:[_base webViewJavascriptFetchQueyCommand] completionHandler:^(NSString* result, NSError* error) {
+        __strong __typeof(weakSelf) self = weakSelf;
         if (error != nil) {
             NSLog(@"WebViewJavascriptBridge: WARNING: Error when trying to fetch data from WKWebView: %@", error);
         }
-        [_base flushMessageQueue:result];
+        [self->_base flushMessageQueue:result];
     }];
 }
 
@@ -189,8 +206,6 @@
     [_webView evaluateJavaScript:javascriptCommand completionHandler:nil];
     return NULL;
 }
-
-
 
 @end
 
